@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Venture Oracle | Predictor</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <nav>
+        <a href="index.html" class="logo">VentureOracle</a>
+        <ul>
+            <li><a href="index.html">Home</a></li>
+            <li><a href="predict.html" class="active">Predictor</a></li>
+            <li><a href="about.html">About</a></li>
+        </ul>
+    </nav>
+    <main>
+        <div class="glass-card">
+            <h2 style="text-align: center; margin-top: 0; margin-bottom: 30px;">Input Startup Metrics</h2>
+            <form id="prediction-form">
+                <div class="form-grid">
+                    <div class="form-group full-width">
+                        <label>Total Funding Raised (USD)</label>
+                        <input type="number" name="total_funding" step="any" placeholder="5000000" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Funding Rounds</label>
+                        <input type="number" name="num_rounds" placeholder="3" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Founded Year</label>
+                        <input type="number" name="founded_year" placeholder="2015" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Avg Round Size</label>
+                        <input type="number" name="avg_round_size" step="any" placeholder="1500000" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Max Round Size</label>
+                        <input type="number" name="max_round_size" step="any" placeholder="3000000" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Days to First Fund</label>
+                        <input type="number" name="days_to_first_funding" placeholder="180" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Funding Duration</label>
+                        <input type="number" name="funding_duration_days" placeholder="730" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Country Code</label>
+                        <input type="text" name="country_code" placeholder="USA" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Category</label>
+                        <input type="text" name="category_code" placeholder="web" required>
+                    </div>
+                </div>
+                <button type="submit" class="btn" id="submit-btn" style="width: 100%; margin-top: 25px;">Analyze Profile</button>
+            </form>
+            
+            <div id="result">
+                <h3 id="result-label" style="margin:0 0 10px 0; font-size:1.8rem;"></h3>
+                <p id="result-prob" style="margin:0; color:var(--text-muted);"></p>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        document.getElementById('prediction-form').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const btn = document.getElementById('submit-btn');
+            const resultDiv = document.getElementById('result');
+            const resultLabel = document.getElementById('result-label');
+            const resultProb = document.getElementById('result-prob');
+            
+            btn.textContent = 'Processing...';
+            btn.style.opacity = '0.7';
+            resultDiv.style.display = 'none';
+            resultDiv.className = '';
+
+            const formData = new FormData(e.target);
+            const data = Object.fromEntries(formData.entries());
+
+            ['total_funding', 'num_rounds', 'avg_round_size', 'max_round_size', 'days_to_first_funding', 'funding_duration_days', 'founded_year'].forEach(field => {
+                if (data[field]) data[field] = Number(data[field]);
+            });
+
+            try {
+                const response = await fetch('http://localhost:5000/predict', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(data)
+                });
+                const result = await response.json();
+                if (!response.ok) throw new Error(result.error || 'Failed');
+
+                resultDiv.style.display = 'block';
+                resultLabel.textContent = result.label;
+                
+                if (result.survived === 1) {
+                    resultDiv.classList.add('success');
+                    resultLabel.style.color = '#10b981';
+                } else {
+                    resultDiv.classList.add('failure');
+                    resultLabel.style.color = '#ef4444';
+                }
+                resultProb.textContent = `Probability: ${(result.probability * 100).toFixed(1)}%`;
+            } catch (error) {
+                resultDiv.style.display = 'block';
+                resultLabel.textContent = 'Error';
+                resultLabel.style.color = '#ef4444';
+                resultProb.textContent = error.message;
+            } finally {
+                btn.textContent = 'Analyze Profile';
+                btn.style.opacity = '1';
+            }
+        });
+    </script>
+</body>
+</html>
